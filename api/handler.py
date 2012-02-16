@@ -147,6 +147,7 @@ class UserSettingsHandler(webapp.RequestHandler):
 
   def get(self):
     """Retrieve all settings for the current user."""
+    self.response.headers.add_header('Access-Control-Allow-Origin', '*')
     try:
       settings = self._GetUserSettings()
       self._DumpResults(
@@ -156,6 +157,7 @@ class UserSettingsHandler(webapp.RequestHandler):
 
   def put(self):
     """Update all provided settings for the current user."""
+    self.response.headers.add_header('Access-Control-Allow-Origin', '*')
     try:
       settings = self._GetUserSettings()
       body = simplejson.loads(self.request.body)
@@ -266,6 +268,7 @@ class IncidentHandler(webapp.RequestHandler):
     If no ID is found in the current request URI, render all Incidents as
     output.
     """
+    self.response.headers.add_header('Access-Control-Allow-Origin', '*')
     try:
       incident_id = self._GetIdFromUri()
       if incident_id is not None:
@@ -328,6 +331,7 @@ class IncidentHandler(webapp.RequestHandler):
 
   def post(self):
     """Create the Incident described by the request POST body."""
+    self.response.headers.add_header('Access-Control-Allow-Origin', '*')
     try:
       incident = model.Incident.FromJson(self.request.body)
       incident.id = None
@@ -340,6 +344,7 @@ class IncidentHandler(webapp.RequestHandler):
 
   def put(self):
     """Update the Incident described by the request body."""
+    self.response.headers.add_header('Access-Control-Allow-Origin', '*')
     try:
       incident = self._GetIncidentByUriId()
       new_incident = model.Incident.FromJson(self.request.body)
@@ -356,6 +361,7 @@ class IncidentHandler(webapp.RequestHandler):
 
   def delete(self):
     """Delete the Incident with the given ID."""
+    self.response.headers.add_header('Access-Control-Allow-Origin', '*')
     try:
       incident = self._GetIncidentByUriId()
       tasks_utils.DeleteTask(incident)
