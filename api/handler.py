@@ -184,6 +184,14 @@ class UserSettingsHandler(webapp.RequestHandler):
     except UserOrSettingsNotFoundError:
       self._HandleUserOrSettingsNotFoundError()
 
+  def options(self):
+    """Respond to OPTIONS requests, for handling CORS."""
+    self.response.headers.add_header('Access-Control-Allow-Origin', '*')
+    self.response.headers.add_header('Access-Control-Allow-Methods',
+        'GET, POST, OPTIONS, PUT')
+    self.response.headers.add_header('Access-Control-Allow-Headers',
+        'Content-Type')
+
 
 class IncidentHandler(webapp.RequestHandler):
   """Handles all RESTful operations on Incidents."""
@@ -371,6 +379,14 @@ class IncidentHandler(webapp.RequestHandler):
       self._HandleIncidentNotFoundError()
     except db.Error, e:
       self._HandleUnknownError(e)
+
+  def options(self):
+    """Respond to OPTIONS requests, for handling CORS."""
+    self.response.headers.add_header('Access-Control-Allow-Origin', '*')
+    self.response.headers.add_header('Access-Control-Allow-Methods',
+        'GET, POST, OPTIONS, PUT')
+    self.response.headers.add_header('Access-Control-Allow-Headers',
+        'Content-Type')
 
   @staticmethod
   def ApplyFilter(query, property_operator, value):

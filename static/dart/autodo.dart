@@ -3,7 +3,7 @@
 
 interface ApiService {
   Future<Incident> getIncident(num id);
-  Future<List<Incident>> listIncidents([queryParams]);
+  Future<List<Incident>> listIncidents([Map<String, String> queryParams]);
   Future<Incident> updateIncident(Incident incident);
 }
 
@@ -14,15 +14,30 @@ interface ApiService {
  *   AjaxService service = new AjaxService(
  *     "http://localhost:9999/resources/v1/");
  *   
+ *   // Get an incident
  *   Future<Incident> f = service.getIncident(1);
  *   f.then((Incident value) {
  *     print(value);
  *   });
  *   
- *   Future<List<Incident>> fPrime = service.listIncidents();
+ *   // Get all incidents that match params
+ *   Map<String, String> params = new Map<String, String>();
+ *   params["accepted_tags"] = "API-Test";
+ *   Future<List<Incident>> fPrime = service.listIncidents(params);
  *   fPrime.then((List<Incident> incidents) {
  *     incidents.forEach((Incident incident) {
  *       print(incident);
+ *     });
+ *   });
+ *
+ *   // Update an incident
+ *   Future<Incident> f = service.getIncident(1);
+ *   f.then((Incident incident) {
+ *     print(incident);
+ *     incident.status = "resolved";
+ *     Future<Incident> fPrime = service.updateIncident(incident);
+ *     fPrime.then((Incident updated) {
+ *       print(updated);
  *     });
  *   });
  */
@@ -50,10 +65,8 @@ class AjaxService implements ApiService {
   
   /**
    * Retrieves a list of incidents.
-   *
-   * TODO(danielholevoet): Use queryParams to filter this list.
    */
-  Future<List<Incident>> listIncidents([queryParams]) {
+  Future<List<Incident>> listIncidents([Map<String, String> queryParams]) {
     Completer<List<Incident>> completer = new Completer<List<Incident>>();
     
     Function success = Incident fn(List<Map<String, Dynamic>> data) {
@@ -64,7 +77,13 @@ class AjaxService implements ApiService {
       completer.complete(incidents);
     };
     
-    String uri = baseUri + 'incidents/';
+    String args = '?';
+    if (queryParams != null) {
+      queryParams.forEach((key, value) {
+        args = args + key + '=' + value;
+      });
+    }
+    String uri = baseUri + 'incidents/' + args;
     AjaxClient.doGet(uri, onSuccess:success);
     
     return completer.future;
@@ -73,10 +92,25 @@ class AjaxService implements ApiService {
   /**
    * Updates an incident.
    *
-   * NOT YET IMPLEMENTED.
+   * Currently returns the same incident that's passed in. This is due to the
+   * API implementation (which returns status 204, not a copy of the updated
+   * object). This will change in the future, and then this method will be
+   * updated to return the object the server returns.
    */
   Future<Incident> updateIncident(Incident incident) {
-    return null;
+    Completer<Incident> completer = new Completer<Incident>();
+    
+    Function success = Incident fn(Map<String, Dynamic> data) {
+      // Our API currently returns 204 on PUT, so we'll send back the same
+      // incident. In the future, this will change to returning the new copy.
+      completer.complete(incident);
+    };
+    
+    String uri = baseUri + 'incidents/' + incident.id.toString();
+    String data = JSON.stringify(incident.toMap());
+    AjaxClient.doPut(uri, data, onSuccess:success);
+    
+    return completer.future;
   }
 }
 
@@ -86,16 +120,21 @@ class AjaxClient {
     doRequest("GET", uri, onSuccess:onSuccess, onError:onError);
   }
   
+  static void doPut(String uri, data, [Function onSuccess=null,
+                                       Function onError=null]) {
+    doRequest("PUT", uri, data:data, onSuccess:onSuccess, onError:onError);
+  }
+  
   static void doRequest(String method, String uri,
                         [String data=null, Function onSuccess=null,
                          Function onError=null]) {
     XMLHttpRequest req = new XMLHttpRequest();
     req.open(method, uri, true);
-    req.on.readyStateChange.add(void _(evt) {
+    req.on.readyStateChange.add((evt) {
       if (req.readyState == XMLHttpRequest.DONE) {
         if (req.status == 200 || req.status == 204) {
           Object resp;
-          if (req.responseText != null) {
+          if (req.responseText != null && req.responseText.length > 0) {
             resp = JSON.parse(req.responseText);
           }
           if (onSuccess != null) {
@@ -125,10 +164,14 @@ class Incident {
   String status;
   List<String> acceptedTags;
   List<String> suggestedTags;
+  List<String> trainedTags;
   
   Incident(this.id, [this.title, this.author, this.created, this.updated,
                      this.owner, this.status]);
   
+  /**
+   * Instantiates an incident from a map (usually sourced from JSON).
+   */
   Incident.fromMap(Map<String, Dynamic> data) {
     this.id = data["id"];
     this.title = data["title"];
@@ -139,6 +182,25 @@ class Incident {
     this.status = data["status"];
     this.acceptedTags = data["accepted_tags"];
     this.suggestedTags = data["suggested_tags"];
+    this.trainedTags = data["trained_tags"];
+  }
+  
+  /**
+   * Converts an incident to a map (usually intended to become JSON).
+   */
+  Map<String, Dynamic> toMap() {
+    Map<String, Dynamic> data = new Map<String, Dynamic>();
+    data["id"] = id;
+    data["title"] = title;
+    data["author"] = author;
+    data["created"] = created;
+    data["updated"] = updated;
+    data["owner"] = owner;
+    data["status"] = status;
+    data["accepted_tags"] = acceptedTags;
+    data["suggested_tags"] = suggestedTags;
+    data["trained_tags"] = trainedTags;
+    return data;
   }
   
   String toString() {
