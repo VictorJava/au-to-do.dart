@@ -211,6 +211,77 @@ class Incident {
   }
 }
 
+interface ObjectCache<T> {
+  Future<T> getObject(String key);
+  Future<List<T>> listObjects();
+  Future<List<T>> queryObjects([Map<String, String> queryParams]);
+  Future<T> updateObject(T object);
+  Future<bool> deleteObject(T object);
+}
+
+// TODO(dan): Patch this up when the underlying implementation works.
+//abstract class ObjectCacheImpl implements ObjectCache {
+//  static String objectName = "objects"; 
+//  
+//  String dbName = "objects";
+//  int version = 1;
+//  
+//  IDBObjectStore store;
+//  
+//  ObjectCacheImpl();
+//  
+//  void createObjectStore(Function callback) {
+//    IDBRequest req = IDBFactory.open(objectName, version);
+//    req.addEventListener(IDBSuccess, (IDBDatabase db) {
+//      store = db.createObjectStore(objectName);
+//    });
+//  }
+//}
+
+/**
+ * Provides cache for incidents, and manages synchronization with the server.
+ *
+ * While the underlying implementation is incomplete, retrieving from and
+ * storing to this object will result in requests over the wire. It will also
+ * directly implement ObjectCache in the interim.
+ */
+class IncidentCache implements ObjectCache {
+  String baseUri;
+  AjaxService service;
+  
+  IncidentCache(baseUri) {
+    this.baseUri = baseUri;
+    service = new AjaxService(baseUri);
+  }
+  
+  Future<Incident> getObject(String key) {
+    return service.getIncident(Math.parseInt(key));
+  }
+  
+  Future<List<Incident>> listObjects() {
+    return service.listIncidents();
+  }
+  
+  Future<List<Incident>> queryObjects([Map<String, String> queryParams]) {
+    return service.listIncidents(queryParams);
+  }
+  
+  Future<Incident> updateObject(Incident incident) {
+    return service.updateIncident(incident);
+  }
+  
+  /**
+   * Deletes an object from the cache.
+   *
+   * Returns whether or not the object was deleted.
+   */
+  Future<bool> deleteObject(Incident incident) {
+    Completer<bool> completer = new Completer<bool>();
+    completer.complete(false);
+    return completer.future;
+  }
+}
+
 class autodo {
 
   autodo() {
