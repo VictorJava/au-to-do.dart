@@ -459,13 +459,13 @@ google.devrel.samples.autodo.Render.showInfoMessage = function(message) {
  */
 google.devrel.samples.autodo.Render.backButton = function() {
   Logger.log('rendered back button');
-  $('a.select-button').replaceWith(
-    '<a class="back-button atd-button no-margin"' +
+  $('#select-button').replaceWith(
+    '<a class="atd-button no-margin" id="back-button"' +
     'data-tooltip="Back to Case List">' +
     '<img src="/images/theme/icons/back.gif" /></a>'
   );
-  $('a.back-button').unbind('click');
-  $('a.back-button').click(function() {
+  $('#back-button').unbind('click');
+  $('#back-button').click(function() {
     Logger.log('pushed back');
     Render.loadPreviousHashPair();
   });
@@ -490,17 +490,17 @@ google.devrel.samples.autodo.Render.checkBox = function(opt_properties) {
  * @param {Object} data JSON object containing incident list info.
  */
 google.devrel.samples.autodo.Render.incidentTable = function(data) {
-  if ($('a.back-button').length) {
-    $('a.back-button').replaceWith(
-    '<a class="select-button atd-button no-margin" data-tooltip="Select">' +
-    '<input type="checkbox" id="toggle-all">' +
+  if ($('#back-button').length) {
+    $('#back-button').replaceWith(
+    '<a class="atd-button no-margin" id="select-button"' +
+    'data-tooltip="Select"><input type="checkbox" id="toggle-all">' +
     '</a>'
     );
   }
   // Array to hold accumulated global tag list.
   var tagList = Array();
-  $('#content').empty();
-  $('#content').append($('<table>').addClass('list'));
+  $('#main').empty();
+  $('#main').append($('<table>').addClass('list'));
   $.each(data, function(i, incident) {
     var trow = $('<tr>').attr('status', incident.status);
     var checkBox = Render.checkBox({
@@ -526,7 +526,7 @@ google.devrel.samples.autodo.Render.incidentTable = function(data) {
     trow.append($('<td>').append(
         google.devrel.samples.autodo.Util.formatDateStamp(incident.created))
     );
-    $('#content > table').append(trow);
+    $('#main > table').append(trow);
     // Add current incident tags to global list if not duplicates.
     var allTags = incident.accepted_tags.concat(incident.suggested_tags);
     for (var i = 0; i < allTags.length; i++) {
@@ -569,9 +569,9 @@ google.devrel.samples.autodo.Render.setStatusButton = function(opt_override) {
  * Renders a button to reload an incident list.
  */
 google.devrel.samples.autodo.Render.reloadButton = function() {
-  if ($('a.original-button').length) {
-    $('a.original-button').replaceWith(
-    '<a class="reload-button atd-button" data-tooltip="Reload">' +
+  if ($('#original-button').length) {
+    $('#original-button').replaceWith(
+    '<a class="atd-button" id="reload-button" data-tooltip="Reload">' +
     '<img src="/images/theme/icons/reload.png" /></a>'
     );
   }
@@ -583,9 +583,9 @@ google.devrel.samples.autodo.Render.reloadButton = function() {
  * @param {string} canonicalLink of the original incident.
  */
 google.devrel.samples.autodo.Render.originalButton = function(canonicalLink) {
-  if ($('a.reload-button').length) {
-    $('a.reload-button').replaceWith(
-    '<a class="original-button atd-button" data-tooltip="Original">' +
+  if ($('#reload-button').length) {
+    $('#reload-button').replaceWith(
+    '<a class="atd-button" id="original-button" data-tooltip="Original">' +
     'Original</a>'
     );
   }
@@ -736,7 +736,7 @@ google.devrel.samples.autodo.Render.singleIncident = function(data) {
   Render.backButton();
   Render.setStatusButton(data.status == 'resolved');
   Render.originalButton(data.canonical_link);
-  $('#content').empty();
+  $('#main').empty();
   var incidentTd = $('<td>').css('padding', '10px 0px 10px 0px');
   // <p> tags are used as throwaway tags for HTML sanitization and don't
   // appear in the UI.
@@ -746,8 +746,8 @@ google.devrel.samples.autodo.Render.singleIncident = function(data) {
   Render.tagList(incidentTd, data);
   $('titleDiv .label').append($('<a>'));
   incidentTd.append(titleDiv);
-  $('#content').append($('<table>').addClass('incident'));
-  $('#content > table').append($('<tr>').append(incidentTd));
+  $('#main').append($('<table>').addClass('incident'));
+  $('#main > table').append($('<tr>').append(incidentTd));
   $.each(data.messages, function(i, message) {
     var td = $('<td>');
     td.append($('<div>').addClass('incident-date').append(
@@ -759,7 +759,7 @@ google.devrel.samples.autodo.Render.singleIncident = function(data) {
     var messageText = $('<p>').text(message.body).html().replace(
         /\r?\n/g, '<br />');
     td.append($('<div>').addClass('incident').append(messageText));
-    $('#content > table').append($('<tr>').append(td));
+    $('#main > table').append($('<tr>').append(td));
   });
   Bindings.bindAcceptTags();
   Bindings.bindRemoveTags();
@@ -833,8 +833,8 @@ google.devrel.samples.autodo.Render.settingsList = function() {
     type: 'GET',
     dataType: 'html',
     success: function(data) {
-        $('#content').empty();
-        $('#content').append(data);
+        $('#main').empty();
+        $('#main').append(data);
         google.devrel.samples.autodo.ApiClient.getUserSettings();
     }
   });
@@ -845,7 +845,7 @@ google.devrel.samples.autodo.Render.settingsList = function() {
  * @param {Object} li JQuery sidebar li object to be toggled.
  */
 google.devrel.samples.autodo.Render.selectedSidebarLink = function(li) {
-  $('#sidebar li').removeClass('selected');
+  $('nav li').removeClass('selected');
   $(li).addClass('selected');
 };
 
@@ -961,10 +961,10 @@ google.devrel.samples.autodo.Bindings.bindAssignOptions = function() {
  * Binds the status button to incident resolving/reopen function.
  */
 google.devrel.samples.autodo.Bindings.bindStatusOptions = function() {
-  $('a.status-button').click(function() {
+  $('#status-button').click(function() {
     var status = $(this).attr('status');
     // Retrieve incidents that should be updated.
-    $('#content').find('input:checked, div.title.content-list-div').each(
+    $('#main').find('input:checked, div.title.content-list-div').each(
         function() {
       ApiClient.getIncidentData($(this).attr('value'),
                                 ApiClient.setStatus, status);
@@ -985,7 +985,7 @@ google.devrel.samples.autodo.Bindings.bindIncidentLink = function() {
  * Binds sidebar <li> elements to render incident lists.
  */
 google.devrel.samples.autodo.Bindings.bindSideBar = function() {
-  $('#sidebar').find('li').click(function() {
+  $('nav').find('li').click(function() {
     Render.selectedSidebarLink($(this));
   });
   $('li.mine').click(function() {
@@ -1058,7 +1058,7 @@ google.devrel.samples.autodo.Bindings.bindSearchInputs = function() {
  */
 google.devrel.samples.autodo.Bindings.bindOriginalButton = function(
     canonicalLink) {
-  $('a.original-button').click(function() {
+  $('#original-button').click(function() {
     window.open(canonicalLink);
     return false;
   });
@@ -1068,7 +1068,8 @@ google.devrel.samples.autodo.Bindings.bindOriginalButton = function(
  * Binds the a reload button to the list view.
  */
 google.devrel.samples.autodo.Bindings.bindReloadButton = function() {
-  $('a.reload-button').click(function() {
+  $('#reload-button').unbind('click');
+  $('#reload-button').click(function() {
     // Reset incident cache.
     Data.incidentListUpdated = 0;
     Util.reloadCurrentHash();
@@ -1126,7 +1127,7 @@ google.devrel.samples.autodo.Bindings.bindRemoveTags = function() {
  * Binds settings button to a settings view.
  */
 google.devrel.samples.autodo.Bindings.bindSettingsButton = function() {
-  $('a.settings-button').click(function() {
+  $('#settings-button').click(function() {
     Util.setHashPair(Query.SETTINGS);
   });
 };
@@ -1241,7 +1242,7 @@ google.devrel.samples.autodo.Bindings.bindHashChange = function() {
         $('input#search-box').val(Util.getHashString());
         ApiClient.search();
     }
-    var button = $('#sidebar').find('li' + '.' + hashPair.key);
+    var button = $('nav').find('li' + '.' + hashPair.key);
     if (button) {
       Render.selectedSidebarLink(button);
     }
