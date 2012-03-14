@@ -10,6 +10,9 @@ inbound_services:
 
 
 handlers:
+- url: /dart
+  static_dir: static/dart
+
 - url: /images
   static_dir: static/images
 
