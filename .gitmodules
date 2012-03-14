@@ -1,0 +1,3 @@
+[submodule "static/dart/lawndart"]
+	path = static/dart/lawndart
+	url = git@github.com:sethladd/lawndart.git

@@ -1,5 +1,6 @@
 #import('dart:html');
 #import('dart:json');
+#import('../lawndart/lib/lawndart.dart');
 
 interface ApiService {
   Future<Incident> getIncident(num id);
@@ -282,7 +283,7 @@ class IncidentCache implements ObjectCache {
   }
 }
 
-class autodo {
+class Application {
 
   autodo() {
   }
