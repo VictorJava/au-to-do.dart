@@ -7,3 +7,5 @@ oauth2/
 oauth2client/
 uritemplate/
 *.pyc
+.children
+.project
