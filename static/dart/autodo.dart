@@ -1,6 +1,7 @@
 #import('dart:html');
 #import('dart:json');
 #import('lawndart/lib/lawndart.dart');
+#import('views.dart');
 
 interface ApiService {
   Future<Incident> getIncident(num id);
@@ -283,18 +284,16 @@ class IncidentCache implements ObjectCache {
   }
 }
 
-class Application {
+class autodo {
+
+  PageView page;
 
   autodo() {
+    page = new PageView();
   }
 
   void run() {
-    write("Hello World!");
-  }
-
-  void write(String message) {
-    // the HTML library defines a global "document" variable
-    document.query('#status').innerHTML = message;
+    page.render();
   }
 }
 
