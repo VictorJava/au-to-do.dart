@@ -2,10 +2,41 @@
 #import('dart:json');
 #import('lawndart/lib/lawndart.dart');
 
-interface ApiService {
+interface ApiService default AjaxService {
+  ApiService([String baseUri]);
   Future<Incident> getIncident(num id);
-  Future<List<Incident>> listIncidents([Map<String, String> queryParams]);
+  Future<List<Incident>> listIncidents([ListIncidentsFilter filter]);
   Future<Incident> updateIncident(Incident incident);
+}
+
+class ListIncidentsFilter {
+  var accepted_tags,
+      suggested_tags,
+      owner,
+      status,
+      created_before,
+      created_after,
+      updated_before,
+      updated_after,
+      resolved_before,
+      resolved_after;
+  
+  ListIncidentsFilter.allForMe([owner = 'me']);
+
+  Map<String, String> toMap() {
+    return {
+      'accepted_tags' : accepted_tags,
+      'suggested_tags' : suggested_tags,
+      'owner' : owner,
+      'status' : status,
+      'created_before' : created_before,
+      'created_after' : created_after,
+      'updated_before' : updated_before,
+      'updated_after' : updated_after,
+      'resolved_before' : resolved_before,
+      'resolved_after' : resolved_after
+    };
+  }
 }
 
 /**
@@ -45,7 +76,7 @@ interface ApiService {
 class AjaxService implements ApiService {
   String baseUri;
   
-  AjaxService(this.baseUri);
+  AjaxService([this.baseUri = '/resources/v1/']);
   
   /**
    * Retrieves an incident by ID.
@@ -67,7 +98,7 @@ class AjaxService implements ApiService {
   /**
    * Retrieves a list of incidents.
    */
-  Future<List<Incident>> listIncidents([Map<String, String> queryParams]) {
+  Future<List<Incident>> listIncidents([ListIncidentsFilter filter]) {
     Completer<List<Incident>> completer = new Completer<List<Incident>>();
     
     Function success = Incident fn(List<Map<String, Dynamic>> data) {
@@ -78,13 +109,13 @@ class AjaxService implements ApiService {
       completer.complete(incidents);
     };
     
-    String args = '?';
-    if (queryParams != null) {
-      queryParams.forEach((key, value) {
-        args = args + key + '=' + value;
+    List<String> args = [];
+    if (filter != null) {
+      filter.toMap().forEach((key, value) {
+        if (value != null) args.add('${key}=${value}');
       });
     }
-    String uri = baseUri + 'incidents/' + args;
+    String uri = baseUri + 'incidents/?' + Strings.join(args, '&');
     AjaxClient.doGet(uri, onSuccess:success);
     
     return completer.future;
@@ -212,90 +243,14 @@ class Incident {
   }
 }
 
-interface ObjectCache<T> {
-  Future<T> getObject(String key);
-  Future<List<T>> listObjects();
-  Future<List<T>> queryObjects([Map<String, String> queryParams]);
-  Future<T> updateObject(T object);
-  Future<bool> deleteObject(T object);
-}
-
-// TODO(dan): Patch this up when the underlying implementation works.
-//abstract class ObjectCacheImpl implements ObjectCache {
-//  static String objectName = "objects"; 
-//  
-//  String dbName = "objects";
-//  int version = 1;
-//  
-//  IDBObjectStore store;
-//  
-//  ObjectCacheImpl();
-//  
-//  void createObjectStore(Function callback) {
-//    IDBRequest req = IDBFactory.open(objectName, version);
-//    req.addEventListener(IDBSuccess, (IDBDatabase db) {
-//      store = db.createObjectStore(objectName);
-//    });
-//  }
-//}
-
-/**
- * Provides cache for incidents, and manages synchronization with the server.
- *
- * While the underlying implementation is incomplete, retrieving from and
- * storing to this object will result in requests over the wire. It will also
- * directly implement ObjectCache in the interim.
- */
-class IncidentCache implements ObjectCache {
-  String baseUri;
-  AjaxService service;
-  
-  IncidentCache(baseUri) {
-    this.baseUri = baseUri;
-    service = new AjaxService(baseUri);
-  }
-  
-  Future<Incident> getObject(String key) {
-    return service.getIncident(Math.parseInt(key));
-  }
-  
-  Future<List<Incident>> listObjects() {
-    return service.listIncidents();
-  }
-  
-  Future<List<Incident>> queryObjects([Map<String, String> queryParams]) {
-    return service.listIncidents(queryParams);
-  }
-  
-  Future<Incident> updateObject(Incident incident) {
-    return service.updateIncident(incident);
-  }
-  
-  /**
-   * Deletes an object from the cache.
-   *
-   * Returns whether or not the object was deleted.
-   */
-  Future<bool> deleteObject(Incident incident) {
-    Completer<bool> completer = new Completer<bool>();
-    completer.complete(false);
-    return completer.future;
-  }
-}
-
-class Application {
+class autodo {
 
   autodo() {
   }
 
   void run() {
-    write("Hello World!");
   }
 
-  void write(String message) {
-    // the HTML library defines a global "document" variable
-    document.query('#status').innerHTML = message;
-  }
 }
 
 void main() {
