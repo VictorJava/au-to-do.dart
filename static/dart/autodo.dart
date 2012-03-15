@@ -4,10 +4,41 @@
 #import('views.dart');
 #import('models.dart');
 
-interface ApiService {
+interface ApiService default AjaxService {
+  ApiService([String baseUri]);
   Future<Incident> getIncident(num id);
-  Future<List<Incident>> listIncidents([Map<String, String> queryParams]);
+  Future<List<Incident>> listIncidents([ListIncidentsFilter filter]);
   Future<Incident> updateIncident(Incident incident);
+}
+
+class ListIncidentsFilter {
+  var accepted_tags,
+      suggested_tags,
+      owner,
+      status,
+      created_before,
+      created_after,
+      updated_before,
+      updated_after,
+      resolved_before,
+      resolved_after;
+  
+  ListIncidentsFilter.allForMe([owner = 'me']);
+
+  Map<String, String> toMap() {
+    return {
+      'accepted_tags' : accepted_tags,
+      'suggested_tags' : suggested_tags,
+      'owner' : owner,
+      'status' : status,
+      'created_before' : created_before,
+      'created_after' : created_after,
+      'updated_before' : updated_before,
+      'updated_after' : updated_after,
+      'resolved_before' : resolved_before,
+      'resolved_after' : resolved_after
+    };
+  }
 }
 
 /**
@@ -47,7 +78,7 @@ interface ApiService {
 class AjaxService implements ApiService {
   String baseUri;
   
-  AjaxService(this.baseUri);
+  AjaxService([this.baseUri = '/resources/v1/']);
   
   /**
    * Retrieves an incident by ID.
@@ -69,7 +100,7 @@ class AjaxService implements ApiService {
   /**
    * Retrieves a list of incidents.
    */
-  Future<List<Incident>> listIncidents([Map<String, String> queryParams]) {
+  Future<List<Incident>> listIncidents([ListIncidentsFilter filter]) {
     Completer<List<Incident>> completer = new Completer<List<Incident>>();
     
     Function success = Incident fn(List<Map<String, Dynamic>> data) {
@@ -80,13 +111,13 @@ class AjaxService implements ApiService {
       completer.complete(incidents);
     };
     
-    String args = '?';
-    if (queryParams != null) {
-      queryParams.forEach((key, value) {
-        args = args + key + '=' + value;
+    List<String> args = [];
+    if (filter != null) {
+      filter.toMap().forEach((key, value) {
+        if (value != null) args.add('${key}=${value}');
       });
     }
-    String uri = baseUri + 'incidents/' + args;
+    String uri = baseUri + 'incidents/?' + Strings.join(args, '&');
     AjaxClient.doGet(uri, onSuccess:success);
     
     return completer.future;
