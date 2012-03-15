@@ -2,6 +2,7 @@
 #import('dart:json');
 #import('lawndart/lib/lawndart.dart');
 #import('views.dart');
+#source('value.dart');
 
 interface ApiService default AjaxService {
   ApiService([String baseUri]);
@@ -247,13 +248,31 @@ class Incident {
 class autodo {
 
   PageView page;
+  Adapter database;
+  ApiService service;
+  ListValue<Incident> visibleIncidents;
 
   autodo() {
     page = new PageView();
+    database = new IndexedDbAdapter({'dbName' : 'autodo'});
+    service = new ApiService();
+    visibleIncidents = new ListValue<Incident>();
   }
 
   void run() {
+    _loadDatabase();
     page.render();
+  }
+  
+  _loadDatabase() {
+    database.open().then((_) => _syncDatabase());
+  }
+  
+  _syncDatabase() {
+    service.listIncidents(new ListIncidentsFilter.allForMe()).then((incidents) {
+      visibleIncidents.addAll(incidents);
+      incidents.forEach((i) => database.save(i, i.id));
+    });
   }
 }
 
