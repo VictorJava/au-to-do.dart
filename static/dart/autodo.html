@@ -15,8 +15,10 @@
   <!-- Au-to-do specific styles -->
   <link rel="stylesheet" href="style.css">
   
+  <!-- indexeddb doesn't work in dartium
   <script type="application/dart" src="autodo.dart"></script>
   <script src="http://dart.googlecode.com/svn/branches/bleeding_edge/dart/client/dart.js"></script>
+  -->
 </head>
 
 <body>
@@ -66,5 +68,7 @@
   
   <div id="notificationbar"><span class="message"></span></div>
   <div id="lastactionbar"><span class="message"></span></div>
+  
+  <script type="text/javascript" src="autodo.dart.js"></script>
 </body>
 </html>
