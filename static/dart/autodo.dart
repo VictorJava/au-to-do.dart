@@ -1,6 +1,7 @@
 #import('dart:html');
 #import('dart:json');
 #import('lawndart/lib/lawndart.dart');
+#import('views.dart');
 
 interface ApiService default AjaxService {
   ApiService([String baseUri]);
@@ -184,8 +185,8 @@ class AjaxClient {
 }
 
 class Incident {
-  static String NEW = "new";
-  static String RESOLVED = "resolved";
+  static final String NEW = "new";
+  static final String RESOLVED = "resolved";
   
   num id;
   String title;
@@ -245,12 +246,15 @@ class Incident {
 
 class autodo {
 
+  PageView page;
+
   autodo() {
+    page = new PageView();
   }
 
   void run() {
+    page.render();
   }
-
 }
 
 void main() {
