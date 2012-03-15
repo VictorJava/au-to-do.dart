@@ -1,6 +1,10 @@
 #library('views');
 
 #import('dart:html');
+#import('state.dart');
+#import('models.dart');
+
+UIState state;
 
 interface View {
   void render();
@@ -31,23 +35,14 @@ class DefaultView implements View {
 }
 
 class SidebarView extends DefaultView {
-  static final MINE = "#sb_mine";
-  static final MINE_ALL = "#sb_mineall";
-  static final NEEDS_ACTION = "#sb_needsaction";
-  static final RESOLVED = "#sb_resolved";
-  static final ALL = "#sb_all";
+  static final MINE = "sb_mine";
+  static final MINE_ALL = "sb_mineall";
+  static final NEEDS_ACTION = "sb_needsaction";
+  static final RESOLVED = "sb_resolved";
+  static final ALL = "sb_all";
   
-  void selected(String element) {
-    self.queryAll('li').every(fn(Element e) {
-      e.classes.remove('selected');
-    });
-    self.query(element).classes.add('selected');
-  }
-}
-
-class PageView extends DefaultView {
-  static final String SIDEBAR_ID = "nav";
-  static final String SIDEBAR_HTML = """
+  static final String ID = "nav";
+  static final String HTML = """
 <ul>
   <li id="sb_mine" class="mine">Mine (open)</li>
   <li id="sb_mineall" class="mineall">Mine (all)</li>
@@ -56,17 +51,123 @@ class PageView extends DefaultView {
   <li id="sb_all" class="all">All</li>
 </ul>
     """;
-  SidebarView sidebar;
   
-  PageView() {
-    sidebar = new SidebarView();
-    sidebar.parent = this.self;
-    sidebar.id = SIDEBAR_ID;
-    sidebar.html = SIDEBAR_HTML;
+  SidebarView(Element parent) {
+    this.parent = parent;
+    this.id = ID;
+    this.html = HTML;
+    findSelf();
+  }
+  
+  void bind() {
+    self.queryAll('li').forEach(fn(Element e) {
+      e.on.click.add(fn(Event event) {
+        select(event.target.id);
+        state.push(event.target.id);
+      });
+    });
+  }
+  
+  void select(String element) {
+    self.queryAll('li').forEach(fn(Element e) {
+      e.classes.remove('selected');
+    });
+    self.query('#' + element).classes.add('selected');
+  }
+}
+
+class ListView<T> extends DefaultView {
+  List<T> items;
+}
+
+class IncidentListView extends ListView<Incident> {
+  static final String ID = '#main';
+  static final String HTML = '<table class="list"></table>';
+  
+  List<IncidentView> views;
+  
+  IncidentListView(Element parent, List<Incident> items) {
+    this.parent = parent;
+    this.items = items;
+    this.id = ID;
+    this.html = HTML;
+    findSelf();
+    
+    views = new List<IncidentView>();
+    items.forEach(fn(Incident incident) {
+      views.addLast(new IncidentView(this.self, incident));
+    });
   }
   
   void render() {
-    sidebar.render();
-    sidebar.selected(SidebarView.MINE);
+    super.render();
+    Element table = self.query('table.list');
+    views.forEach(fn(IncidentView view) {
+      Element row = new Element.tag('tr');
+      row.id = 'incident_' + view.incident.id;
+      table.nodes.add(row);
+      view.render();
+    });
+  }
+  
+  void bind() {}
+}
+
+class IncidentView extends DefaultView {
+  static final String CHECKBOX_HTML = """
+  <td>
+    <input type="checkbox" class="content_checkbox" value="id">
+  </td>
+    """;
+  static final String CONTENT_HTML = """
+  <td>
+    <div class="content-list-div" value="id">
+      <strong>title</strong>
+      <span>summary</span>
+    </div>
+  </td>
+    """;
+  static final String DATE_HTML = '<td>datetime</td>';
+  
+  Incident incident;
+  
+  IncidentView(Element parent, Incident incident) {
+    this.parent = parent;
+    this.incident = incident;
+    this.id = '#incident_' + incident.id.toString();
+  }
+  
+  void render() {
+    findSelf();
+    self.elements = [
+        new Element.html(CHECKBOX_HTML),
+        new Element.html(CONTENT_HTML),
+        new Element.html(DATE_HTML)];
+    self.query('td input').value = incident.id.toString();
+    self.query('.content-list-div strong').innerHTML = incident.title;
+  }
+}
+
+class PageView extends DefaultView {
+  SidebarView sidebarView;
+  IncidentListView incidentListView;
+  
+  PageView() {
+    state = new UIState();
+    sidebarView = new SidebarView(this.self);
+    
+    List<Incident> incidents = new List<Incident>();
+    Incident incident = new Incident(1);
+    incident.title = 'Foo';
+    incidents.add(incident);
+    
+    incidentListView = new IncidentListView(this.self, incidents);
+  }
+  
+  void render() {
+    sidebarView.render();
+    sidebarView.bind();
+    sidebarView.select(SidebarView.MINE);
+    incidentListView.render();
   }
 }

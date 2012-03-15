@@ -293,7 +293,7 @@ input[type=checkbox]:hover {
 }
 
 input[type=checkbox]:checked::after {
-  content:url('/images/theme/icons/check_no_box.png');
+  content:url('../images/theme/icons/check_no_box.png');
   display:block;
   position:absolute;
   top:-6px;
