@@ -373,6 +373,9 @@ $defProp(ListFactory.prototype, "set$length", function(value) { return this.leng
 $defProp(ListFactory.prototype, "add", function(value) {
   this.push(value);
 });
+$defProp(ListFactory.prototype, "addLast", function(value) {
+  this.push(value);
+});
 $defProp(ListFactory.prototype, "addAll", function(collection) {
   for (var $$i = collection.iterator(); $$i.hasNext(); ) {
     var item = $$i.next();
@@ -564,6 +567,17 @@ FutureImpl.prototype.then = function(onComplete) {
   }
   else if (!this._exceptionHandled) {
     $throw(this._exception);
+  }
+}
+FutureImpl.prototype.handleException = function(onException) {
+  if (this._exceptionHandled) return;
+  if (this._isComplete) {
+    if (this._exception != null) {
+      this._exceptionHandled = onException(this._exception);
+    }
+  }
+  else {
+    this._exceptionHandlers.add(onException);
   }
 }
 FutureImpl.prototype._complete = function() {
@@ -773,15 +787,6 @@ HashMapImplementation.prototype.forEach = function(f) {
     }
   }
 }
-HashMapImplementation.prototype.getKeys = function() {
-  var list = new Array(this.get$length());
-  var i = (0);
-  this.forEach(function _(key, value) {
-    list.$setindex(i++, key);
-  }
-  );
-  return list;
-}
 HashMapImplementation.prototype.containsKey = function(key) {
   return (this._probeForLookup(key) != (-1));
 }
@@ -800,6 +805,17 @@ function HashMapImplementation_Dynamic$DoubleLinkedQueueEntry_KeyValuePair() {
 }
 HashMapImplementation_Dynamic$DoubleLinkedQueueEntry_KeyValuePair.prototype.is$Map = function(){return true};
 HashMapImplementation_Dynamic$DoubleLinkedQueueEntry_KeyValuePair.prototype.is$Map_dart_core_String$Dynamic = function(){return true};
+// ********** Code for HashMapImplementation_dart_core_String$Dynamic **************
+$inherits(HashMapImplementation_dart_core_String$Dynamic, HashMapImplementation);
+function HashMapImplementation_dart_core_String$Dynamic() {
+  this._numberOfEntries = (0);
+  this._numberOfDeleted = (0);
+  this._loadLimit = HashMapImplementation._computeLoadLimit((8));
+  this._keys = new Array((8));
+  this._values = new Array((8));
+}
+HashMapImplementation_dart_core_String$Dynamic.prototype.is$Map = function(){return true};
+HashMapImplementation_dart_core_String$Dynamic.prototype.is$Map_dart_core_String$Dynamic = function(){return true};
 // ********** Code for HashMapImplementation_dart_core_String$dart_core_String **************
 $inherits(HashMapImplementation_dart_core_String$dart_core_String, HashMapImplementation);
 function HashMapImplementation_dart_core_String$dart_core_String() {
@@ -847,10 +863,6 @@ HashSetImplementation.prototype.filter = function(f) {
   }
   );
   return result;
-}
-HashSetImplementation.prototype.every = function(f) {
-  var keys = this._backingMap.getKeys();
-  return keys.every(f);
 }
 HashSetImplementation.prototype.get$length = function() {
   return this._backingMap.get$length();
@@ -1074,15 +1086,6 @@ DoubleLinkedQueue.prototype.forEach = function(f) {
     f(entry._element);
     entry = nextEntry;
   }
-}
-DoubleLinkedQueue.prototype.every = function(f) {
-  var entry = this._sentinel._next;
-  while ((null == entry ? null != (this._sentinel) : entry !== this._sentinel)) {
-    var nextEntry = entry._next;
-    if (!f(entry._element)) return false;
-    entry = nextEntry;
-  }
-  return true;
 }
 DoubleLinkedQueue.prototype.filter = function(f) {
   var other = new DoubleLinkedQueue();
@@ -1459,6 +1462,9 @@ $dynamic("get$classes").Element = function() {
   }
   return this._cssClassSet;
 }
+$dynamic("get$on").Element = function() {
+  return new _ElementEventsImpl(this);
+}
 $dynamic("get$_children").Element = function() {
   return this.children;
 }
@@ -1472,7 +1478,34 @@ $dynamic("get$_firstElementChild").Element = function() {
   return this.firstElementChild;
 }
 $dynamic("get$id").Element = function() { return this.id; };
+$dynamic("set$id").Element = function(value) { return this.id = value; };
 $dynamic("set$innerHTML").Element = function(value) { return this.innerHTML = value; };
+$dynamic("get$click").Element = function() {
+  return this.click.bind(this);
+}
+Function.prototype.bind = Function.prototype.bind ||
+  function(thisObj) {
+    var func = this;
+    var funcLength = func.$length || func.length;
+    var argsLength = arguments.length;
+    if (argsLength > 1) {
+      var boundArgs = Array.prototype.slice.call(arguments, 1);
+      var bound = function() {
+        // Prepend the bound arguments to the current arguments.
+        var newArgs = Array.prototype.slice.call(arguments);
+        Array.prototype.unshift.apply(newArgs, boundArgs);
+        return func.apply(thisObj, newArgs);
+      };
+      bound.$length = Math.max(0, funcLength - (argsLength - 1));
+      return bound;
+    } else {
+      var bound = function() {
+        return func.apply(thisObj, arguments);
+      };
+      bound.$length = funcLength;
+      return bound;
+    }
+  };
 $dynamic("_getAttribute").Element = function(name) {
   return this.getAttribute(name);
 }
@@ -1561,6 +1594,39 @@ $dynamic("is$html_Element").HTMLBaseFontElement = function(){return true};
 // ********** Code for _BlobBuilderImpl **************
 // ********** Code for _BodyElementImpl **************
 $dynamic("is$html_Element").HTMLBodyElement = function(){return true};
+$dynamic("get$on").HTMLBodyElement = function() {
+  return new _BodyElementEventsImpl(this);
+}
+// ********** Code for _EventsImpl **************
+function _EventsImpl(_ptr) {
+  this._ptr = _ptr;
+}
+_EventsImpl.prototype.get$_ptr = function() { return this._ptr; };
+_EventsImpl.prototype.$index = function(type) {
+  return this._get(type.toLowerCase());
+}
+_EventsImpl.prototype._get = function(type) {
+  return new _EventListenerListImpl(this._ptr, type);
+}
+// ********** Code for _ElementEventsImpl **************
+$inherits(_ElementEventsImpl, _EventsImpl);
+function _ElementEventsImpl(_ptr) {
+  _EventsImpl.call(this, _ptr);
+}
+_ElementEventsImpl.prototype.get$click = function() {
+  return this._get("click");
+}
+_ElementEventsImpl.prototype.get$error = function() {
+  return this._get("error");
+}
+// ********** Code for _BodyElementEventsImpl **************
+$inherits(_BodyElementEventsImpl, _ElementEventsImpl);
+function _BodyElementEventsImpl(_ptr) {
+  _ElementEventsImpl.call(this, _ptr);
+}
+_BodyElementEventsImpl.prototype.get$error = function() {
+  return this._get("error");
+}
 // ********** Code for _ButtonElementImpl **************
 $dynamic("is$html_Element").HTMLButtonElement = function(){return true};
 $dynamic("get$name").HTMLButtonElement = function() { return this.name; };
@@ -1613,6 +1679,9 @@ $dynamic("iterator").CanvasPixelArray = function() {
 $dynamic("add").CanvasPixelArray = function(value) {
   $throw(new UnsupportedOperationException("Cannot add to immutable List."));
 }
+$dynamic("addLast").CanvasPixelArray = function(value) {
+  $throw(new UnsupportedOperationException("Cannot add to immutable List."));
+}
 $dynamic("addAll").CanvasPixelArray = function(collection) {
   $throw(new UnsupportedOperationException("Cannot add to immutable List."));
 }
@@ -1621,9 +1690,6 @@ $dynamic("forEach").CanvasPixelArray = function(f) {
 }
 $dynamic("filter").CanvasPixelArray = function(f) {
   return _Collections.filter(this, [], f);
-}
-$dynamic("every").CanvasPixelArray = function(f) {
-  return _Collections.every(this, f);
 }
 $dynamic("last").CanvasPixelArray = function() {
   return this.$index(this.length - (1));
@@ -1646,29 +1712,6 @@ _ConsoleImpl = (typeof console == 'undefined' ? {} : console);
 _ConsoleImpl.get$error = function() {
   return this.error.bind(this);
 }
-Function.prototype.bind = Function.prototype.bind ||
-  function(thisObj) {
-    var func = this;
-    var funcLength = func.$length || func.length;
-    var argsLength = arguments.length;
-    if (argsLength > 1) {
-      var boundArgs = Array.prototype.slice.call(arguments, 1);
-      var bound = function() {
-        // Prepend the bound arguments to the current arguments.
-        var newArgs = Array.prototype.slice.call(arguments);
-        Array.prototype.unshift.apply(newArgs, boundArgs);
-        return func.apply(thisObj, newArgs);
-      };
-      bound.$length = Math.max(0, funcLength - (argsLength - 1));
-      return bound;
-    } else {
-      var bound = function() {
-        return func.apply(thisObj, arguments);
-      };
-      bound.$length = funcLength;
-      return bound;
-    }
-  };
 // ********** Code for _ContentElementImpl **************
 $dynamic("is$html_Element").HTMLContentElement = function(){return true};
 // ********** Code for _ConvolverNodeImpl **************
@@ -1746,8 +1789,14 @@ $dynamic("remove$0").EntrySync = function() {
 $dynamic("is$html_Element").HTMLDivElement = function(){return true};
 // ********** Code for _DocumentImpl **************
 $dynamic("is$html_Element").HTMLHtmlElement = function(){return true};
+$dynamic("get$on").HTMLHtmlElement = function() {
+  return new _DocumentEventsImpl(this.get$_jsDocument());
+}
 $dynamic("_createElement").HTMLHtmlElement = function(tagName) {
   return this.parentNode.createElement(tagName);
+}
+$dynamic("get$_jsDocument").HTMLHtmlElement = function() {
+  return this.parentNode;
 }
 $dynamic("get$parent").HTMLHtmlElement = function() {
   return null;
@@ -1756,6 +1805,17 @@ $dynamic("get$parent").HTMLHtmlElement = function() {
 $dynamic("is$_SecretHtmlDocumentImpl").HTMLDocument = function(){return true};
 $dynamic("get$_documentElement").HTMLDocument = function() {
   return this.documentElement;
+}
+// ********** Code for _DocumentEventsImpl **************
+$inherits(_DocumentEventsImpl, _ElementEventsImpl);
+function _DocumentEventsImpl(_ptr) {
+  _ElementEventsImpl.call(this, _ptr);
+}
+_DocumentEventsImpl.prototype.get$click = function() {
+  return this._get("click");
+}
+_DocumentEventsImpl.prototype.get$error = function() {
+  return this._get("error");
 }
 // ********** Code for FilteredElementList **************
 function FilteredElementList(node) {
@@ -1795,6 +1855,9 @@ FilteredElementList.prototype.get$add = function() {
 FilteredElementList.prototype.addAll = function(collection) {
   collection.forEach(this.get$add());
 }
+FilteredElementList.prototype.addLast = function(value) {
+  this.add(value);
+}
 FilteredElementList.prototype.clear = function() {
   this._childNodes.clear();
 }
@@ -1807,9 +1870,6 @@ FilteredElementList.prototype.removeLast = function() {
 }
 FilteredElementList.prototype.filter = function(f) {
   return this.get$_filtered().filter(f);
-}
-FilteredElementList.prototype.every = function(f) {
-  return this.get$_filtered().every(f);
 }
 FilteredElementList.prototype.get$length = function() {
   return this.get$_filtered().get$length();
@@ -1852,11 +1912,23 @@ $dynamic("set$innerHTML").DocumentFragment = function(value) {
 $dynamic("get$id").DocumentFragment = function() {
   return "";
 }
+$dynamic("set$id").DocumentFragment = function(value) {
+  $throw(new UnsupportedOperationException("ID can't be set for document fragments."));
+}
 $dynamic("get$parent").DocumentFragment = function() {
   return null;
 }
 $dynamic("get$classes").DocumentFragment = function() {
   return new HashSetImplementation_dart_core_String();
+}
+$dynamic("click").DocumentFragment = function() {
+
+}
+$dynamic("get$click").DocumentFragment = function() {
+  return this.click.bind(this);
+}
+$dynamic("get$on").DocumentFragment = function() {
+  return new _ElementEventsImpl(this);
 }
 $dynamic("query").DocumentFragment = function(selectors) {
   return this.querySelector(selectors);
@@ -1905,16 +1977,6 @@ _ChildrenElementList.prototype.filter = function(f) {
   );
   return new _FrozenElementList._wrap$ctor(output);
 }
-_ChildrenElementList.prototype.every = function(f) {
-  for (var $$i = this.iterator(); $$i.hasNext(); ) {
-    var element = $$i.next();
-    if (!f(element)) {
-      return false;
-    }
-  }
-  ;
-  return true;
-}
 _ChildrenElementList.prototype.get$length = function() {
   return this._childElements.get$length();
 }
@@ -1927,6 +1989,9 @@ _ChildrenElementList.prototype.$setindex = function(index, value) {
 _ChildrenElementList.prototype.add = function(value) {
   this._html_element._appendChild(value);
   return value;
+}
+_ChildrenElementList.prototype.addLast = function(value) {
+  return this.add(value);
 }
 _ChildrenElementList.prototype.iterator = function() {
   return this._toList().iterator();
@@ -1977,16 +2042,6 @@ _FrozenElementList.prototype.filter = function(f) {
   }
   return out;
 }
-_FrozenElementList.prototype.every = function(f) {
-  for (var $$i = this.iterator(); $$i.hasNext(); ) {
-    var element = $$i.next();
-    if (!f(element)) {
-      return false;
-    }
-  }
-  ;
-  return true;
-}
 _FrozenElementList.prototype.get$length = function() {
   return this._nodeList.get$length();
 }
@@ -1997,6 +2052,9 @@ _FrozenElementList.prototype.$setindex = function(index, value) {
   $throw(const$0003);
 }
 _FrozenElementList.prototype.add = function(value) {
+  $throw(const$0003);
+}
+_FrozenElementList.prototype.addLast = function(value) {
   $throw(const$0003);
 }
 _FrozenElementList.prototype.iterator = function() {
@@ -2043,9 +2101,6 @@ _ListWrapper.prototype.forEach = function(f) {
 _ListWrapper.prototype.filter = function(f) {
   return this._html_list.filter(f);
 }
-_ListWrapper.prototype.every = function(f) {
-  return this._html_list.every(f);
-}
 _ListWrapper.prototype.get$length = function() {
   return this._html_list.get$length();
 }
@@ -2057,6 +2112,9 @@ _ListWrapper.prototype.$setindex = function(index, value) {
 }
 _ListWrapper.prototype.add = function(value) {
   return this._html_list.add(value);
+}
+_ListWrapper.prototype.addLast = function(value) {
+  return this._html_list.addLast(value);
 }
 _ListWrapper.prototype.addAll = function(collection) {
   return this._html_list.addAll(collection);
@@ -2151,17 +2209,6 @@ $dynamic("get$name").EventException = function() { return this.name; };
 $dynamic("_addEventListener").EventSource = function(type, listener, useCapture) {
   this.addEventListener(type, listener, useCapture);
 }
-// ********** Code for _EventsImpl **************
-function _EventsImpl(_ptr) {
-  this._ptr = _ptr;
-}
-_EventsImpl.prototype.get$_ptr = function() { return this._ptr; };
-_EventsImpl.prototype.$index = function(type) {
-  return this._get(type.toLowerCase());
-}
-_EventsImpl.prototype._get = function(type) {
-  return new _EventListenerListImpl(this._ptr, type);
-}
 // ********** Code for _EventListenerListImpl **************
 function _EventListenerListImpl(_ptr, _type) {
   this._ptr = _ptr;
@@ -2216,6 +2263,9 @@ $dynamic("iterator").Float32Array = function() {
 $dynamic("add").Float32Array = function(value) {
   $throw(new UnsupportedOperationException("Cannot add to immutable List."));
 }
+$dynamic("addLast").Float32Array = function(value) {
+  $throw(new UnsupportedOperationException("Cannot add to immutable List."));
+}
 $dynamic("addAll").Float32Array = function(collection) {
   $throw(new UnsupportedOperationException("Cannot add to immutable List."));
 }
@@ -2224,9 +2274,6 @@ $dynamic("forEach").Float32Array = function(f) {
 }
 $dynamic("filter").Float32Array = function(f) {
   return _Collections.filter(this, [], f);
-}
-$dynamic("every").Float32Array = function(f) {
-  return _Collections.every(this, f);
 }
 $dynamic("last").Float32Array = function() {
   return this.$index(this.length - (1));
@@ -2251,6 +2298,9 @@ $dynamic("iterator").Float64Array = function() {
 $dynamic("add").Float64Array = function(value) {
   $throw(new UnsupportedOperationException("Cannot add to immutable List."));
 }
+$dynamic("addLast").Float64Array = function(value) {
+  $throw(new UnsupportedOperationException("Cannot add to immutable List."));
+}
 $dynamic("addAll").Float64Array = function(collection) {
   $throw(new UnsupportedOperationException("Cannot add to immutable List."));
 }
@@ -2259,9 +2309,6 @@ $dynamic("forEach").Float64Array = function(f) {
 }
 $dynamic("filter").Float64Array = function(f) {
   return _Collections.filter(this, [], f);
-}
-$dynamic("every").Float64Array = function(f) {
-  return _Collections.every(this, f);
 }
 $dynamic("last").Float64Array = function() {
   return this.$index(this.length - (1));
@@ -2281,6 +2328,17 @@ $dynamic("is$html_Element").HTMLFrameElement = function(){return true};
 $dynamic("get$name").HTMLFrameElement = function() { return this.name; };
 // ********** Code for _FrameSetElementImpl **************
 $dynamic("is$html_Element").HTMLFrameSetElement = function(){return true};
+$dynamic("get$on").HTMLFrameSetElement = function() {
+  return new _FrameSetElementEventsImpl(this);
+}
+// ********** Code for _FrameSetElementEventsImpl **************
+$inherits(_FrameSetElementEventsImpl, _ElementEventsImpl);
+function _FrameSetElementEventsImpl(_ptr) {
+  _ElementEventsImpl.call(this, _ptr);
+}
+_FrameSetElementEventsImpl.prototype.get$error = function() {
+  return this._get("error");
+}
 // ********** Code for _GeolocationImpl **************
 // ********** Code for _GeopositionImpl **************
 // ********** Code for _HRElementImpl **************
@@ -2303,6 +2361,9 @@ $dynamic("iterator").HTMLCollection = function() {
 $dynamic("add").HTMLCollection = function(value) {
   $throw(new UnsupportedOperationException("Cannot add to immutable List."));
 }
+$dynamic("addLast").HTMLCollection = function(value) {
+  $throw(new UnsupportedOperationException("Cannot add to immutable List."));
+}
 $dynamic("addAll").HTMLCollection = function(collection) {
   $throw(new UnsupportedOperationException("Cannot add to immutable List."));
 }
@@ -2311,9 +2372,6 @@ $dynamic("forEach").HTMLCollection = function(f) {
 }
 $dynamic("filter").HTMLCollection = function(f) {
   return _Collections.filter(this, [], f);
-}
-$dynamic("every").HTMLCollection = function(f) {
-  return _Collections.every(this, f);
 }
 $dynamic("last").HTMLCollection = function() {
   return this.$index(this.get$length() - (1));
@@ -2373,9 +2431,17 @@ $dynamic("is$html_Element").HTMLImageElement = function(){return true};
 $dynamic("get$name").HTMLImageElement = function() { return this.name; };
 // ********** Code for _InputElementImpl **************
 $dynamic("is$html_Element").HTMLInputElement = function(){return true};
+$dynamic("get$on").HTMLInputElement = function() {
+  return new _InputElementEventsImpl(this);
+}
 $dynamic("get$name").HTMLInputElement = function() { return this.name; };
 $dynamic("get$value").HTMLInputElement = function() { return this.value; };
 $dynamic("set$value").HTMLInputElement = function(value) { return this.value = value; };
+// ********** Code for _InputElementEventsImpl **************
+$inherits(_InputElementEventsImpl, _ElementEventsImpl);
+function _InputElementEventsImpl(_ptr) {
+  _ElementEventsImpl.call(this, _ptr);
+}
 // ********** Code for _Int16ArrayImpl **************
 var _Int16ArrayImpl = {};
 $dynamic("is$List").Int16Array = function(){return true};
@@ -2393,6 +2459,9 @@ $dynamic("iterator").Int16Array = function() {
 $dynamic("add").Int16Array = function(value) {
   $throw(new UnsupportedOperationException("Cannot add to immutable List."));
 }
+$dynamic("addLast").Int16Array = function(value) {
+  $throw(new UnsupportedOperationException("Cannot add to immutable List."));
+}
 $dynamic("addAll").Int16Array = function(collection) {
   $throw(new UnsupportedOperationException("Cannot add to immutable List."));
 }
@@ -2401,9 +2470,6 @@ $dynamic("forEach").Int16Array = function(f) {
 }
 $dynamic("filter").Int16Array = function(f) {
   return _Collections.filter(this, [], f);
-}
-$dynamic("every").Int16Array = function(f) {
-  return _Collections.every(this, f);
 }
 $dynamic("last").Int16Array = function() {
   return this.$index(this.length - (1));
@@ -2428,6 +2494,9 @@ $dynamic("iterator").Int32Array = function() {
 $dynamic("add").Int32Array = function(value) {
   $throw(new UnsupportedOperationException("Cannot add to immutable List."));
 }
+$dynamic("addLast").Int32Array = function(value) {
+  $throw(new UnsupportedOperationException("Cannot add to immutable List."));
+}
 $dynamic("addAll").Int32Array = function(collection) {
   $throw(new UnsupportedOperationException("Cannot add to immutable List."));
 }
@@ -2436,9 +2505,6 @@ $dynamic("forEach").Int32Array = function(f) {
 }
 $dynamic("filter").Int32Array = function(f) {
   return _Collections.filter(this, [], f);
-}
-$dynamic("every").Int32Array = function(f) {
-  return _Collections.every(this, f);
 }
 $dynamic("last").Int32Array = function() {
   return this.$index(this.length - (1));
@@ -2463,6 +2529,9 @@ $dynamic("iterator").Int8Array = function() {
 $dynamic("add").Int8Array = function(value) {
   $throw(new UnsupportedOperationException("Cannot add to immutable List."));
 }
+$dynamic("addLast").Int8Array = function(value) {
+  $throw(new UnsupportedOperationException("Cannot add to immutable List."));
+}
 $dynamic("addAll").Int8Array = function(collection) {
   $throw(new UnsupportedOperationException("Cannot add to immutable List."));
 }
@@ -2471,9 +2540,6 @@ $dynamic("forEach").Int8Array = function(f) {
 }
 $dynamic("filter").Int8Array = function(f) {
   return _Collections.filter(this, [], f);
-}
-$dynamic("every").Int8Array = function(f) {
-  return _Collections.every(this, f);
 }
 $dynamic("last").Int8Array = function() {
   return this.$index(this.length - (1));
@@ -2526,6 +2592,9 @@ $dynamic("iterator").MediaList = function() {
 $dynamic("add").MediaList = function(value) {
   $throw(new UnsupportedOperationException("Cannot add to immutable List."));
 }
+$dynamic("addLast").MediaList = function(value) {
+  $throw(new UnsupportedOperationException("Cannot add to immutable List."));
+}
 $dynamic("addAll").MediaList = function(collection) {
   $throw(new UnsupportedOperationException("Cannot add to immutable List."));
 }
@@ -2534,9 +2603,6 @@ $dynamic("forEach").MediaList = function(f) {
 }
 $dynamic("filter").MediaList = function(f) {
   return _Collections.filter(this, [], f);
-}
-$dynamic("every").MediaList = function(f) {
-  return _Collections.every(this, f);
 }
 $dynamic("last").MediaList = function() {
   return this.$index(this.length - (1));
@@ -2589,6 +2655,9 @@ $dynamic("iterator").NamedNodeMap = function() {
 $dynamic("add").NamedNodeMap = function(value) {
   $throw(new UnsupportedOperationException("Cannot add to immutable List."));
 }
+$dynamic("addLast").NamedNodeMap = function(value) {
+  $throw(new UnsupportedOperationException("Cannot add to immutable List."));
+}
 $dynamic("addAll").NamedNodeMap = function(collection) {
   $throw(new UnsupportedOperationException("Cannot add to immutable List."));
 }
@@ -2597,9 +2666,6 @@ $dynamic("forEach").NamedNodeMap = function(f) {
 }
 $dynamic("filter").NamedNodeMap = function(f) {
   return _Collections.filter(this, [], f);
-}
-$dynamic("every").NamedNodeMap = function(f) {
-  return _Collections.every(this, f);
 }
 $dynamic("last").NamedNodeMap = function() {
   return this.$index(this.length - (1));
@@ -2640,6 +2706,9 @@ $dynamic("iterator").NodeList = function() {
 $dynamic("add").NodeList = function(value) {
   this._parent._appendChild(value);
 }
+$dynamic("addLast").NodeList = function(value) {
+  this._parent._appendChild(value);
+}
 $dynamic("addAll").NodeList = function(collection) {
   for (var $$i = collection.iterator(); $$i.hasNext(); ) {
     var node = $$i.next();
@@ -2664,9 +2733,6 @@ $dynamic("forEach").NodeList = function(f) {
 }
 $dynamic("filter").NodeList = function(f) {
   return new _NodeListWrapper(_Collections.filter(this, [], f));
-}
-$dynamic("every").NodeList = function(f) {
-  return _Collections.every(this, f);
 }
 $dynamic("last").NodeList = function() {
   return this.$index(this.length - (1));
@@ -2770,6 +2836,9 @@ $dynamic("set$innerHTML").SVGElement = function(svg) {
 $dynamic("get$id").SVGElement = function() {
   return this.id;
 }
+$dynamic("set$id").SVGElement = function(value) {
+  this.id = value;
+}
 // ********** Code for _SVGAElementImpl **************
 $dynamic("is$html_Element").SVGAElement = function(){return true};
 $dynamic("get$target").SVGAElement = function() { return this.target; };
@@ -2839,9 +2908,6 @@ _CssClassSet.prototype.forEach = function(f) {
 }
 _CssClassSet.prototype.filter = function(f) {
   return this._read().filter(f);
-}
-_CssClassSet.prototype.every = function(f) {
-  return this._read().every(f);
 }
 _CssClassSet.prototype.get$length = function() {
   return this._read().get$length();
@@ -3207,6 +3273,9 @@ $dynamic("iterator").StyleSheetList = function() {
 $dynamic("add").StyleSheetList = function(value) {
   $throw(new UnsupportedOperationException("Cannot add to immutable List."));
 }
+$dynamic("addLast").StyleSheetList = function(value) {
+  $throw(new UnsupportedOperationException("Cannot add to immutable List."));
+}
 $dynamic("addAll").StyleSheetList = function(collection) {
   $throw(new UnsupportedOperationException("Cannot add to immutable List."));
 }
@@ -3215,9 +3284,6 @@ $dynamic("forEach").StyleSheetList = function(f) {
 }
 $dynamic("filter").StyleSheetList = function(f) {
   return _Collections.filter(this, [], f);
-}
-$dynamic("every").StyleSheetList = function(f) {
-  return _Collections.every(this, f);
 }
 $dynamic("last").StyleSheetList = function() {
   return this.$index(this.length - (1));
@@ -3280,6 +3346,9 @@ $dynamic("iterator").TouchList = function() {
 $dynamic("add").TouchList = function(value) {
   $throw(new UnsupportedOperationException("Cannot add to immutable List."));
 }
+$dynamic("addLast").TouchList = function(value) {
+  $throw(new UnsupportedOperationException("Cannot add to immutable List."));
+}
 $dynamic("addAll").TouchList = function(collection) {
   $throw(new UnsupportedOperationException("Cannot add to immutable List."));
 }
@@ -3288,9 +3357,6 @@ $dynamic("forEach").TouchList = function(f) {
 }
 $dynamic("filter").TouchList = function(f) {
   return _Collections.filter(this, [], f);
-}
-$dynamic("every").TouchList = function(f) {
-  return _Collections.every(this, f);
 }
 $dynamic("last").TouchList = function() {
   return this.$index(this.length - (1));
@@ -3322,6 +3388,9 @@ $dynamic("iterator").Uint16Array = function() {
 $dynamic("add").Uint16Array = function(value) {
   $throw(new UnsupportedOperationException("Cannot add to immutable List."));
 }
+$dynamic("addLast").Uint16Array = function(value) {
+  $throw(new UnsupportedOperationException("Cannot add to immutable List."));
+}
 $dynamic("addAll").Uint16Array = function(collection) {
   $throw(new UnsupportedOperationException("Cannot add to immutable List."));
 }
@@ -3330,9 +3399,6 @@ $dynamic("forEach").Uint16Array = function(f) {
 }
 $dynamic("filter").Uint16Array = function(f) {
   return _Collections.filter(this, [], f);
-}
-$dynamic("every").Uint16Array = function(f) {
-  return _Collections.every(this, f);
 }
 $dynamic("last").Uint16Array = function() {
   return this.$index(this.length - (1));
@@ -3357,6 +3423,9 @@ $dynamic("iterator").Uint32Array = function() {
 $dynamic("add").Uint32Array = function(value) {
   $throw(new UnsupportedOperationException("Cannot add to immutable List."));
 }
+$dynamic("addLast").Uint32Array = function(value) {
+  $throw(new UnsupportedOperationException("Cannot add to immutable List."));
+}
 $dynamic("addAll").Uint32Array = function(collection) {
   $throw(new UnsupportedOperationException("Cannot add to immutable List."));
 }
@@ -3365,9 +3434,6 @@ $dynamic("forEach").Uint32Array = function(f) {
 }
 $dynamic("filter").Uint32Array = function(f) {
   return _Collections.filter(this, [], f);
-}
-$dynamic("every").Uint32Array = function(f) {
-  return _Collections.every(this, f);
 }
 $dynamic("last").Uint32Array = function() {
   return this.$index(this.length - (1));
@@ -3392,6 +3458,9 @@ $dynamic("iterator").Uint8Array = function() {
 $dynamic("add").Uint8Array = function(value) {
   $throw(new UnsupportedOperationException("Cannot add to immutable List."));
 }
+$dynamic("addLast").Uint8Array = function(value) {
+  $throw(new UnsupportedOperationException("Cannot add to immutable List."));
+}
 $dynamic("addAll").Uint8Array = function(collection) {
   $throw(new UnsupportedOperationException("Cannot add to immutable List."));
 }
@@ -3400,9 +3469,6 @@ $dynamic("forEach").Uint8Array = function(f) {
 }
 $dynamic("filter").Uint8Array = function(f) {
   return _Collections.filter(this, [], f);
-}
-$dynamic("every").Uint8Array = function(f) {
-  return _Collections.every(this, f);
 }
 $dynamic("last").Uint8Array = function() {
   return this.$index(this.length - (1));
@@ -3498,13 +3564,6 @@ _Collections.forEach = function(iterable, f) {
     var e = $$i.next();
     f(e);
   }
-}
-_Collections.every = function(iterable, f) {
-  for (var $$i = iterable.iterator(); $$i.hasNext(); ) {
-    var e = $$i.next();
-    if (!f(e)) return false;
-  }
-  return true;
 }
 _Collections.filter = function(source, destination, f) {
   for (var $$i = source.iterator(); $$i.hasNext(); ) {
@@ -3727,10 +3786,11 @@ function _jsKeys(obj) {
 }
 //  ********** Library lawndart **************
 // ********** Code for IndexedDbAdapter **************
-function IndexedDbAdapter(options) {
+function IndexedDbAdapter(dbName, storeName, version) {
   this.isReady = false;
-  this.dbName = options.$index("dbName");
-  this.storeName = options.$index("storeName");
+  this.dbName = dbName;
+  this.storeName = storeName;
+  this.version = version;
 }
 IndexedDbAdapter.prototype._throwNotReady = function() {
   $throw("Database not opened or ready");
@@ -3755,8 +3815,8 @@ IndexedDbAdapter.prototype.open = function() {
 }
 IndexedDbAdapter.prototype._initDb = function(completer) {
   var $this = this; // closure support
-  if ("1" != this._db.version) {
-    var versionChange = this._db.setVersion("1");
+  if (this.version != this._db.version) {
+    var versionChange = this._db.setVersion(this.version);
     versionChange.addEventListener("success", (function (e) {
       $this._db.createObjectStore($this.storeName);
       $this.isReady = true;
@@ -3799,6 +3859,59 @@ IndexedDbAdapter.prototype.save = function(obj, key) {
 function _uuid() {
   $throw(new NotImplementedException());
 }
+//  ********** Library state **************
+// ********** Code for UIState **************
+function UIState() {
+  this.states = new Array();
+}
+UIState.prototype.push = function(state) {
+  this.states.addLast(state);
+  print$($add$("pushed ", state));
+}
+// ********** Code for top level **************
+//  ********** Library models **************
+// ********** Code for Incident **************
+function Incident(id, title, author, created, updated, owner, status) {
+  this.id = id;
+  this.title = title;
+  this.author = author;
+  this.created = created;
+  this.updated = updated;
+  this.owner = owner;
+  this.status = status;
+}
+Incident.fromMap$ctor = function(data) {
+  this.id = data.$index("id");
+  this.title = data.$index("title");
+  this.author = data.$index("author");
+  this.created = data.$index("created");
+  this.updated = data.$index("updated");
+  this.owner = data.$index("owner");
+  this.status = data.$index("status");
+  this.acceptedTags = data.$index("accepted_tags");
+  this.suggestedTags = data.$index("suggested_tags");
+  this.trainedTags = data.$index("trained_tags");
+}
+Incident.fromMap$ctor.prototype = Incident.prototype;
+Incident.prototype.get$id = function() { return this.id; };
+Incident.prototype.toMap = function() {
+  var data = new HashMapImplementation_dart_core_String$Dynamic();
+  data.$setindex("id", this.id);
+  data.$setindex("title", this.title);
+  data.$setindex("author", this.author);
+  data.$setindex("created", this.created);
+  data.$setindex("updated", this.updated);
+  data.$setindex("owner", this.owner);
+  data.$setindex("status", this.status);
+  data.$setindex("accepted_tags", this.acceptedTags);
+  data.$setindex("suggested_tags", this.suggestedTags);
+  data.$setindex("trained_tags", this.trainedTags);
+  return data;
+}
+Incident.prototype.toString = function() {
+  return $add$($add$($add$($add$($add$($add$($add$($add$($add$($add$($add$($add$($add$("Incident: ", this.id.toString()), ", title: "), this.title), ", owner: "), this.owner), ", status: "), this.status), ", created: "), this.created), ", acceptedTags: "), this.acceptedTags), ", suggestedTags: "), this.suggestedTags);
+}
+// ********** Code for top level **************
 //  ********** Library views **************
 // ********** Code for DefaultView **************
 function DefaultView() {
@@ -3817,51 +3930,100 @@ DefaultView.prototype.findSelf = function() {
 }
 // ********** Code for SidebarView **************
 $inherits(SidebarView, DefaultView);
-function SidebarView() {
+function SidebarView(parent) {
   DefaultView.call(this);
+  this.parent = parent;
+  this.id = "nav";
+  this.html = "<ul>\n  <li id=\"sb_mine\" class=\"mine\">Mine (open)</li>\n  <li id=\"sb_mineall\" class=\"mineall\">Mine (all)</li>\n  <li id=\"sb_needsaction\" class=\"needsaction\">Needs Action</li>\n  <li id=\"sb_resolved\" class=\"resolved\">Resolved</li>\n  <li id=\"sb_all\" class=\"all\">All</li>\n</ul>\n    ";
+  this.findSelf();
 }
-SidebarView.prototype.selected = function(element) {
-  this.self.queryAll("li").every(function fn(e) {
+SidebarView.prototype.bind = function() {
+  var $this = this; // closure support
+  this.self.queryAll("li").forEach(function fn(e) {
+    e.get$on().get$click().add$1(function fn(event) {
+      $this.select(event.get$target().get$id());
+      $globals.state.push(event.get$target().get$id());
+    }
+    );
+  }
+  );
+}
+SidebarView.prototype.select = function(element) {
+  this.self.queryAll("li").forEach(function fn(e) {
     e.get$classes().remove("selected");
   }
   );
-  this.self.query(element).get$classes().add("selected");
+  this.self.query($add$("#", element)).get$classes().add("selected");
+}
+// ********** Code for ListView **************
+$inherits(ListView, DefaultView);
+function ListView() {}
+// ********** Code for ListView_Incident **************
+$inherits(ListView_Incident, ListView);
+function ListView_Incident() {
+  DefaultView.call(this);
+}
+// ********** Code for IncidentListView **************
+$inherits(IncidentListView, ListView_Incident);
+function IncidentListView(parent, items) {
+  var $this = this; // closure support
+  ListView_Incident.call(this);
+  this.parent = parent;
+  this.items = items;
+  this.id = "#main";
+  this.html = "<table class=\"list\"></table>";
+  this.findSelf();
+  this.views = new Array();
+  items.forEach(function fn(incident) {
+    $this.views.addLast(new IncidentView($this.self, incident));
+  }
+  );
+}
+IncidentListView.prototype.render = function() {
+  DefaultView.prototype.render.call(this);
+  var table = this.self.query("table.list");
+  this.views.forEach(function fn(view) {
+    var row = _ElementFactoryProvider.Element$tag$factory("tr");
+    row.set$id("incident_" + view.incident.id);
+    table.get$nodes().add(row);
+    view.render();
+  }
+  );
+}
+// ********** Code for IncidentView **************
+$inherits(IncidentView, DefaultView);
+function IncidentView(parent, incident) {
+  DefaultView.call(this);
+  this.parent = parent;
+  this.incident = incident;
+  this.id = $add$("#incident_", incident.id.toString());
+}
+IncidentView.prototype.render = function() {
+  this.findSelf();
+  this.self.set$elements([_ElementFactoryProvider.Element$html$factory("  <td>\n    <input type=\"checkbox\" class=\"content_checkbox\" value=\"id\">\n  </td>\n    "), _ElementFactoryProvider.Element$html$factory("  <td>\n    <div class=\"content-list-div\" value=\"id\">\n      <strong>title</strong>\n      <span>summary</span>\n    </div>\n  </td>\n    "), _ElementFactoryProvider.Element$html$factory("<td>datetime</td>")]);
+  this.self.query("td input").set$value(this.incident.id.toString());
+  this.self.query(".content-list-div strong").set$innerHTML(this.incident.title);
 }
 // ********** Code for PageView **************
 $inherits(PageView, DefaultView);
 function PageView() {
   DefaultView.call(this);
-  this.sidebar = new SidebarView();
-  this.sidebar.parent = this.self;
-  this.sidebar.id = "nav";
-  this.sidebar.html = "<ul>\n  <li id=\"sb_mine\" class=\"mine\">Mine (open)</li>\n  <li id=\"sb_mineall\" class=\"mineall\">Mine (all)</li>\n  <li id=\"sb_needsaction\" class=\"needsaction\">Needs Action</li>\n  <li id=\"sb_resolved\" class=\"resolved\">Resolved</li>\n  <li id=\"sb_all\" class=\"all\">All</li>\n</ul>\n    ";
+  $globals.state = new UIState();
+  this.sidebarView = new SidebarView(this.self);
+  var incidents = new Array();
+  var incident = new Incident((1));
+  incident.title = "Foo";
+  incidents.add(incident);
+  this.incidentListView = new IncidentListView(this.self, incidents);
 }
 PageView.prototype.render = function() {
-  this.sidebar.render();
-  this.sidebar.selected("#sb_mine");
+  this.sidebarView.render();
+  this.sidebarView.bind();
+  this.sidebarView.select("sb_mine");
+  this.incidentListView.render();
 }
 // ********** Code for top level **************
-//  ********** Library models **************
-// ********** Code for Incident **************
-Incident.fromMap$ctor = function(data) {
-  this.id = data.$index("id");
-  this.title = data.$index("title");
-  this.author = data.$index("author");
-  this.created = data.$index("created");
-  this.updated = data.$index("updated");
-  this.owner = data.$index("owner");
-  this.status = data.$index("status");
-  this.acceptedTags = data.$index("accepted_tags");
-  this.suggestedTags = data.$index("suggested_tags");
-  this.trainedTags = data.$index("trained_tags");
-}
-Incident.fromMap$ctor.prototype = Incident.prototype;
-function Incident() {}
-Incident.prototype.get$id = function() { return this.id; };
-Incident.prototype.toString = function() {
-  return $add$($add$($add$($add$($add$($add$($add$($add$($add$($add$($add$($add$($add$("Incident: ", this.id.toString()), ", title: "), this.title), ", owner: "), this.owner), ", status: "), this.status), ", created: "), this.created), ", acceptedTags: "), this.acceptedTags), ", suggestedTags: "), this.suggestedTags);
-}
-// ********** Code for top level **************
+var state;
 //  ********** Library autodo **************
 // ********** Code for ListIncidentsFilter **************
 ListIncidentsFilter.allForMe$ctor = function(owner) {
@@ -3930,7 +4092,7 @@ AjaxClient.doRequest = function(method, uri, data, onSuccess, onError) {
 // ********** Code for autodo **************
 function autodo() {
   this.page = new PageView();
-  this.database = new IndexedDbAdapter(_map(["dbName", "autodo"]));
+  this.database = new IndexedDbAdapter("autodo", "incidents", (2));
   this.service = new AjaxService("/resources/v1/");
   this.visibleIncidents = new ListValue_Incident();
 }
@@ -3940,7 +4102,12 @@ autodo.prototype.run = function() {
 }
 autodo.prototype._loadDatabase = function() {
   var $this = this; // closure support
-  this.database.open().then((function (_) {
+  var result = this.database.open();
+  result.handleException((function (e) {
+    return print$(e);
+  })
+  );
+  result.then((function (_) {
     return $this._syncDatabase();
   })
   );
@@ -3950,7 +4117,7 @@ autodo.prototype._syncDatabase = function() {
   this.service.listIncidents(new ListIncidentsFilter.allForMe$ctor("me")).then((function (incidents) {
     $this.visibleIncidents.addAll(incidents);
     incidents.forEach((function (i) {
-      return $this.database.save(i, i.get$id());
+      return $this.database.save(i.toMap(), i.get$id());
     })
     );
   })

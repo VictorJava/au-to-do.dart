@@ -196,7 +196,7 @@ class autodo {
 
   autodo() {
     page = new PageView();
-    database = new IndexedDbAdapter({'dbName' : 'autodo'});
+    database = new IndexedDbAdapter('autodo', 'incidents', version:2);
     service = new ApiService();
     visibleIncidents = new ListValue<Incident>();
   }
@@ -207,13 +207,15 @@ class autodo {
   }
   
   _loadDatabase() {
-    database.open().then((_) => _syncDatabase());
+    Future result = database.open();
+    result.handleException((e) => print(e));
+    result.then((_) => _syncDatabase());
   }
   
   _syncDatabase() {
     service.listIncidents(new ListIncidentsFilter.allForMe()).then((incidents) {
       visibleIncidents.addAll(incidents);
-      incidents.forEach((i) => database.save(i, i.id));
+      incidents.forEach((i) => database.save(i.toMap(), i.id));
     });
   }
 }
