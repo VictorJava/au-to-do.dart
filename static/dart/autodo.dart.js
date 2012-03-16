@@ -550,7 +550,7 @@ FutureImpl.prototype.get$value = function() {
   if (null != this._exception) {
     $throw(this._exception);
   }
-  return this._dart_coreimpl_value;
+  return this._value;
 }
 FutureImpl.prototype.get$isComplete = function() {
   return this._isComplete;
@@ -609,7 +609,7 @@ FutureImpl.prototype._setValue = function(value) {
   if (this._isComplete) {
     $throw(new FutureAlreadyCompleteException());
   }
-  this._dart_coreimpl_value = value;
+  this._value = value;
   this._complete();
 }
 FutureImpl.prototype._setException = function(exception) {
@@ -3808,7 +3808,12 @@ IndexedDbAdapter.prototype.open = function() {
   );
   request.addEventListener("error", (function (e) {
     print$("error");
-    completer.completeException(e.get$target().get$error());
+    completer.completeException(e.get$result());
+  })
+  );
+  request.addEventListener("blocked", (function (e) {
+    print$("blocked");
+    completer.completeException(e.get$result());
   })
   );
   return completer.get$future();
@@ -3816,6 +3821,7 @@ IndexedDbAdapter.prototype.open = function() {
 IndexedDbAdapter.prototype._initDb = function(completer) {
   var $this = this; // closure support
   if (this.version != this._db.version) {
+    print$(("upgrading " + this._db.version + " to " + this.version));
     var versionChange = this._db.setVersion(this.version);
     versionChange.addEventListener("success", (function (e) {
       $this._db.createObjectStore($this.storeName);
@@ -3829,6 +3835,7 @@ IndexedDbAdapter.prototype._initDb = function(completer) {
     );
   }
   else {
+    print$("version good to go");
     this.isReady = true;
     completer.complete(true);
   }
@@ -3871,15 +3878,6 @@ UIState.prototype.push = function(state) {
 // ********** Code for top level **************
 //  ********** Library models **************
 // ********** Code for Incident **************
-function Incident(id, title, author, created, updated, owner, status) {
-  this.id = id;
-  this.title = title;
-  this.author = author;
-  this.created = created;
-  this.updated = updated;
-  this.owner = owner;
-  this.status = status;
-}
 Incident.fromMap$ctor = function(data) {
   this.id = data.$index("id");
   this.title = data.$index("title");
@@ -3893,6 +3891,7 @@ Incident.fromMap$ctor = function(data) {
   this.trainedTags = data.$index("trained_tags");
 }
 Incident.fromMap$ctor.prototype = Incident.prototype;
+function Incident() {}
 Incident.prototype.get$id = function() { return this.id; };
 Incident.prototype.toMap = function() {
   var data = new HashMapImplementation_dart_core_String$Dynamic();
@@ -3910,6 +3909,47 @@ Incident.prototype.toMap = function() {
 }
 Incident.prototype.toString = function() {
   return $add$($add$($add$($add$($add$($add$($add$($add$($add$($add$($add$($add$($add$("Incident: ", this.id.toString()), ", title: "), this.title), ", owner: "), this.owner), ", status: "), this.status), ", created: "), this.created), ", acceptedTags: "), this.acceptedTags), ", suggestedTags: "), this.suggestedTags);
+}
+// ********** Code for top level **************
+//  ********** Library value **************
+// ********** Code for ListValue **************
+function ListValue() {}
+ListValue.prototype.addObserver = function(listener) {
+  if (this._observers == null) this._observers = [];
+  this._observers.add(listener);
+}
+ListValue.prototype._noteAddAllChange = function(objs) {
+  if (this._observers != null) {
+    this._observers.forEach((function (o) {
+      return o.onAddAll(objs);
+    })
+    );
+  }
+}
+ListValue.prototype._noteAddChange = function(obj) {
+  if (this._observers != null) {
+    this._observers.forEach((function (o) {
+      return o.noSuchMethod("onAdd", [obj]);
+    })
+    );
+  }
+}
+ListValue.prototype.add = function(value) {
+  this._items.add(value);
+  this._noteAddChange(value);
+}
+ListValue.prototype.addAll = function(values) {
+  this._items.addAll(values);
+  this._noteAddAllChange(values);
+}
+ListValue.prototype.forEach = function(f) {
+  this._items.forEach(f);
+}
+ListValue.prototype.add$1 = ListValue.prototype.add;
+// ********** Code for ListValue_Incident **************
+$inherits(ListValue_Incident, ListValue);
+function ListValue_Incident() {
+  this._items = [];
 }
 // ********** Code for top level **************
 //  ********** Library views **************
@@ -3965,27 +4005,27 @@ function ListView_Incident() {
 }
 // ********** Code for IncidentListView **************
 $inherits(IncidentListView, ListView_Incident);
-function IncidentListView(parent, items) {
-  var $this = this; // closure support
+function IncidentListView(parent) {
   ListView_Incident.call(this);
   this.parent = parent;
-  this.items = items;
+  this.items = this.items;
   this.id = "#main";
   this.html = "<table class=\"list\"></table>";
   this.findSelf();
   this.views = new Array();
-  items.forEach(function fn(incident) {
-    $this.views.addLast(new IncidentView($this.self, incident));
-  }
-  );
 }
 IncidentListView.prototype.render = function() {
   DefaultView.prototype.render.call(this);
-  var table = this.self.query("table.list");
-  this.views.forEach(function fn(view) {
+  this.table = this.self.query("table.list");
+}
+IncidentListView.prototype.onAddAll = function(incidents) {
+  var $this = this; // closure support
+  incidents.forEach(function fn(incident) {
+    var view = new IncidentView($this.self, incident);
+    $this.views.add(view);
     var row = _ElementFactoryProvider.Element$tag$factory("tr");
-    row.set$id("incident_" + view.incident.id);
-    table.get$nodes().add(row);
+    row.set$id("incident_" + incident.id);
+    $this.table.get$nodes().add(row);
     view.render();
   }
   );
@@ -4010,11 +4050,7 @@ function PageView() {
   DefaultView.call(this);
   $globals.state = new UIState();
   this.sidebarView = new SidebarView(this.self);
-  var incidents = new Array();
-  var incident = new Incident((1));
-  incident.title = "Foo";
-  incidents.add(incident);
-  this.incidentListView = new IncidentListView(this.self, incidents);
+  this.incidentListView = new IncidentListView(this.self);
 }
 PageView.prototype.render = function() {
   this.sidebarView.render();
@@ -4091,14 +4127,18 @@ AjaxClient.doRequest = function(method, uri, data, onSuccess, onError) {
 }
 // ********** Code for autodo **************
 function autodo() {
-  this.page = new PageView();
-  this.database = new IndexedDbAdapter("autodo", "incidents", (2));
-  this.service = new AjaxService("/resources/v1/");
   this.visibleIncidents = new ListValue_Incident();
+  this.page = new PageView();
+  this.database = new IndexedDbAdapter("autodo", "incidents", "2");
+  this.service = new AjaxService("/resources/v1/");
 }
 autodo.prototype.run = function() {
+  this._wireObservers();
   this._loadDatabase();
   this.page.render();
+}
+autodo.prototype._wireObservers = function() {
+  this.visibleIncidents.addObserver(this.page.incidentListView);
 }
 autodo.prototype._loadDatabase = function() {
   var $this = this; // closure support
@@ -4123,43 +4163,6 @@ autodo.prototype._syncDatabase = function() {
   })
   );
 }
-// ********** Code for ListValue **************
-function ListValue() {}
-ListValue.prototype.is$List = function(){return true};
-ListValue.prototype.is$Collection = function(){return true};
-ListValue.prototype._noteAddAllChange = function(objs) {
-  if (this._observers != null) {
-    this._observers.forEach((function (o) {
-      return o.noSuchMethod("onAddAll", [objs]);
-    })
-    );
-  }
-}
-ListValue.prototype._noteAddChange = function(obj) {
-  if (this._observers != null) {
-    this._observers.forEach((function (o) {
-      return o.noSuchMethod("onAdd", [obj]);
-    })
-    );
-  }
-}
-ListValue.prototype.add = function(value) {
-  this._items.add(value);
-  this._noteAddChange(value);
-}
-ListValue.prototype.addAll = function(values) {
-  this._items.addAll(values);
-  this._noteAddAllChange(values);
-}
-ListValue.prototype.add$1 = ListValue.prototype.add;
-// ********** Code for ListValue_Incident **************
-$inherits(ListValue_Incident, ListValue);
-function ListValue_Incident() {
-  this._items = [];
-}
-ListValue_Incident.prototype.is$List = function(){return true};
-ListValue_Incident.prototype.is$Collection = function(){return true};
-ListValue_Incident.prototype.add$1 = ListValue_Incident.prototype.add;
 // ********** Code for top level **************
 function main() {
   new autodo().run();

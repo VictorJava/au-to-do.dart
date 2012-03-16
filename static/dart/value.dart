@@ -2,6 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+#library('value');
+
 
 /**
  * 
@@ -54,7 +56,7 @@ class ComputedValue<T> extends Value<T> {
   }
 }
 
-class ListValue<T> implements List<T> {
+class ListValue<T> {
   List<T> _items;
   List<ListChangeListener> _observers;
   
@@ -87,6 +89,10 @@ class ListValue<T> implements List<T> {
   void addAll(Collection<T> values) {
     _items.addAll(values);
     _noteAddAllChange(values);
+  }
+  
+  void forEach(void f(element)) {
+    _items.forEach(f);
   }
 }
 

@@ -3,6 +3,7 @@
 #import('dart:html');
 #import('state.dart');
 #import('models.dart');
+#import('value.dart');
 
 UIState state;
 
@@ -80,13 +81,14 @@ class ListView<T> extends DefaultView {
   List<T> items;
 }
 
-class IncidentListView extends ListView<Incident> {
+class IncidentListView extends ListView<Incident> implements ListChangeListener<Incident> {
   static final String ID = '#main';
   static final String HTML = '<table class="list"></table>';
   
   List<IncidentView> views;
+  Element table;
   
-  IncidentListView(Element parent, List<Incident> items) {
+  IncidentListView(Element parent) {
     this.parent = parent;
     this.items = items;
     this.id = ID;
@@ -94,23 +96,26 @@ class IncidentListView extends ListView<Incident> {
     findSelf();
     
     views = new List<IncidentView>();
-    items.forEach(fn(Incident incident) {
-      views.addLast(new IncidentView(this.self, incident));
-    });
   }
   
   void render() {
     super.render();
-    Element table = self.query('table.list');
-    views.forEach(fn(IncidentView view) {
+    table = self.query('table.list');
+  }
+  
+  void bind() {}
+  
+  void onAddAll(Collection<Incident> incidents) {
+    incidents.forEach(fn(Incident incident) {
+      IncidentView view = new IncidentView(this.self, incident);
+      views.add(view);
+      // TODO: move this to IncidentView, yes?
       Element row = new Element.tag('tr');
-      row.id = 'incident_' + view.incident.id;
+      row.id = 'incident_' + incident.id;
       table.nodes.add(row);
       view.render();
     });
   }
-  
-  void bind() {}
 }
 
 class IncidentView extends DefaultView {
@@ -155,13 +160,7 @@ class PageView extends DefaultView {
   PageView() {
     state = new UIState();
     sidebarView = new SidebarView(this.self);
-    
-    List<Incident> incidents = new List<Incident>();
-    Incident incident = new Incident(1);
-    incident.title = 'Foo';
-    incidents.add(incident);
-    
-    incidentListView = new IncidentListView(this.self, incidents);
+    incidentListView = new IncidentListView(this.self);
   }
   
   void render() {
