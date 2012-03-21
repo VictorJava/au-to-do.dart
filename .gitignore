@@ -9,3 +9,4 @@ uritemplate/
 *.pyc
 .children
 .project
+*.dart.js
